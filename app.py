@@ -173,5 +173,8 @@ def atualizar_dashboard(dados, data_ini, data_fim, categorias, vendedores, meta_
     return kpis, fig_tempo, fig_categoria, fig_pagamento, fig_produtos, fig_vendedores
 
 # RUN
+server = app.server
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=8050, debug=True)
+
