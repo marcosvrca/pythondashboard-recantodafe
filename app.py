@@ -129,14 +129,25 @@ def atualizar_dashboard(dados, data_ini, data_fim, categorias, vendedores, meta_
     vendas = df_filtrado["id_venda"].nunique() if not df_filtrado.empty else 0
     ticket = faturamento / vendas if vendas > 0 else 0
 
-    # META
-    hoje = datetime.today()
-    df_mes = df_filtrado[(df_filtrado["data_venda"].dt.month == hoje.month) &
-                         (df_filtrado["data_venda"].dt.year == hoje.year)]
-    faturamento_mes = df_mes["valor_total_venda"].sum() if not df_mes.empty else 0
-    status_meta = "🎉 Meta batida! Parabéns!" if faturamento_mes >= meta_mensal else "⚠️ Meta ainda não alcançada"
-    cor_meta = "green" if faturamento_mes >= meta_mensal else "red"
-    icone_meta = "⬆️" if faturamento_mes >= meta_mensal else "⬇️"
+    
+    # META (baseada no período selecionado)
+    faturamento_mes = df_filtrado["valor_total_venda"].sum() if not df_filtrado.empty else 0
+
+    percentual_meta = (faturamento_mes / meta_mensal) * 100 if meta_mensal > 0 else 0
+
+    if faturamento_mes >= meta_mensal:
+        status_meta = "🎉 Meta batida! Excelente trabalho!"
+        cor_meta = "green"
+        icone_meta = "⬆️"
+    elif percentual_meta >= 70:
+        status_meta = "⚠️ Meta próxima! Intensifique as vendas"
+        cor_meta = "orange"
+        icone_meta = "⚠️"
+    else:
+        status_meta = "🚨 Meta distante! Ação necessária"
+        cor_meta = "red"
+        icone_meta = "⬇️"
+
 
     # Cards KPI
     kpis = [
