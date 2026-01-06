@@ -1,131 +1,174 @@
 import pandas as pd
 import dash
+import dash_bootstrap_components as dbc
 from dash import dcc, html, Input, Output
 import plotly.express as px
 from datetime import datetime
 
-# FUNÇÃO PARA CARREGAR DADOS
+# =========================
+# CARREGAMENTO DOS DADOS
+# =========================
 def carregar_dados():
     url = "https://docs.google.com/spreadsheets/d/1yVuRDq2HL-ee4wmUxwXRM2icsMAWjIllcXHHISzpze8/export?format=csv"
     df = pd.read_csv(url)
-    df["data_venda"] = pd.to_datetime(df["data_venda"], errors='coerce')
+    df["data_venda"] = pd.to_datetime(df["data_venda"], errors="coerce")
     df = df.dropna(subset=["data_venda"])
     return df
 
+
 df_inicial = carregar_dados()
 
-# INICIALIZAÇÃO DO APP
-app = dash.Dash(__name__)
+# =========================
+# APP
+# =========================
+app = dash.Dash(
+    __name__,
+    external_stylesheets=[dbc.themes.FLATLY],
+    suppress_callback_exceptions=True
+)
+
+server = app.server
 app.title = "Recanto da Fé"
 
 # =========================
 # LAYOUT
 # =========================
-app.layout = html.Div(style={"padding": "20px"}, children=[
+app.layout = dbc.Container(fluid=True, className="p-4", children=[
 
-    html.H1("🏪 Recanto da Fé – Dashboard de Vendas"),
+    # =========================
+    # TÍTULO
+    # =========================
+    dbc.Row(
+        dbc.Col(
+            html.H1(
+                "🏪 Recanto da Fé – Dashboard de Vendas",
+                className="text-center fw-bold mb-4"
+            )
+        )
+    ),
 
-    # BOTÕES (ADICIONADO)
-    html.Div(style={"marginBottom": "20px"}, children=[
-        html.Button("📊 Dashboard Geral", id="btn-geral", n_clicks=0),
-        html.Button("👤 Dashboard por Vendedor", id="btn-vendedor", n_clicks=0)
-    ]),
+    # =========================
+    # NAVEGAÇÃO
+    # =========================
+    dbc.Row(
+        dbc.Col(
+            dbc.ButtonGroup([
+                dbc.Button("📊 Dashboard Geral", id="btn-geral", n_clicks=0, color="primary"),
+                dbc.Button("👤 Dashboard por Vendedor", id="btn-vendedor", n_clicks=0, color="secondary"),
+            ]),
+            className="text-center mb-4"
+        )
+    ),
 
     dcc.Store(id="pagina-atual", data="geral"),
 
     # =========================
-    # PÁGINA GERAL (ENVOLVENDO O QUE JÁ EXISTIA)
+    # PÁGINA GERAL
     # =========================
     html.Div(id="pagina-geral", children=[
 
-        html.Div(className="meta-container", children=[
-            html.Label("💡 Defina a Meta Mensal (R$):"),
-            dcc.Input(
-                id="input-meta",
-                type="number",
-                value=50000,
-                min=0,
-                step=100,
-                style={"width": "150px"}
-            )
-        ]),
+        # META
+        dbc.Card(
+            dbc.CardBody(
+                dbc.Row([
+                    dbc.Col(html.Label("🎯 Meta Mensal (R$)", className="fw-semibold"), md="auto"),
+                    dbc.Col(
+                        dbc.Input(id="input-meta", type="number", value=50000, min=0, step=100),
+                        md=3
+                    )
+                ], align="center")
+            ),
+            className="mb-4 shadow-sm"
+        ),
 
         # FILTROS
-        html.Div(className="filtros", children=[
-            html.Div(style={"flex": "1"}, children=[
-                html.Label("📅 Filtrar por período"),
-                dcc.DatePickerRange(
-                    id="filtro-data",
-                    min_date_allowed=df_inicial["data_venda"].min(),
-                    max_date_allowed=df_inicial["data_venda"].max(),
-                    start_date=df_inicial["data_venda"].min(),
-                    end_date=df_inicial["data_venda"].max(),
-                    display_format="DD/MM/YYYY",
-                    style={"width": "100%"}
-                )
-            ]),
-            html.Div(style={"flex": "1"}, children=[
-                html.Label("🏷️ Filtrar por categoria"),
-                dcc.Dropdown(
-                    id="filtro-categoria",
-                    options=[{"label": c, "value": c} for c in df_inicial["categoria"].unique()],
-                    placeholder="Filtrar por tipo...",
-                    multi=True
-                )
-            ]),
-            html.Div(style={"flex": "1"}, children=[
-                html.Label("👤 Filtrar por vendedor (geral)"),
-                dcc.Dropdown(
-                    id="filtro-vendedor",
-                    options=[{"label": v, "value": v} for v in df_inicial["vendedor"].unique()],
-                    placeholder="Filtrar por...",
-                    multi=True
-                )
-            ])
-        ]),
+        dbc.Card(
+            dbc.CardBody(
+                dbc.Row([
+                    dbc.Col([
+                        html.Label("📅 Período"),
+                        dcc.DatePickerRange(
+                            id="filtro-data",
+                            min_date_allowed=df_inicial["data_venda"].min(),
+                            max_date_allowed=df_inicial["data_venda"].max(),
+                            start_date=df_inicial["data_venda"].min(),
+                            end_date=df_inicial["data_venda"].max(),
+                            display_format="DD/MM/YYYY"
+                        )
+                    ], md=4),
 
-        html.Div(id="kpis"),
+                    dbc.Col([
+                        html.Label("🏷️ Categoria"),
+                        dcc.Dropdown(
+                            id="filtro-categoria",
+                            options=[{"label": c, "value": c} for c in df_inicial["categoria"].unique()],
+                            multi=True,
+                            placeholder="Selecione"
+                        )
+                    ], md=4),
 
-        html.Div(dcc.Graph(id="grafico-faturamento-tempo")),
-        html.Div(style={"display": "flex", "gap": "20px", "flexWrap": "wrap"}, children=[
-            html.Div(dcc.Graph(id="grafico-categoria"), style={"flex": "1"}),
-            html.Div(dcc.Graph(id="grafico-pagamento"), style={"flex": "1"})
-        ]),
-        html.Div(dcc.Graph(id="grafico-produtos")),
-        html.Div(dcc.Graph(id="grafico-vendedores")),
+                    dbc.Col([
+                        html.Label("👤 Vendedor"),
+                        dcc.Dropdown(
+                            id="filtro-vendedor",
+                            options=[{"label": v, "value": v} for v in df_inicial["vendedor"].unique()],
+                            multi=True,
+                            placeholder="Selecione"
+                        )
+                    ], md=4),
+                ])
+            ),
+            className="mb-4 shadow-sm"
+        ),
 
+        # KPIs
+        dbc.Row(id="kpis", className="g-3 mb-4"),
+
+        # GRÁFICOS
+        dbc.Card(dbc.CardBody(dcc.Graph(id="grafico-faturamento-tempo")), className="mb-4 shadow-sm"),
+
+        dbc.Row([
+            dbc.Col(dbc.Card(dbc.CardBody(dcc.Graph(id="grafico-categoria")), className="shadow-sm"), md=6),
+            dbc.Col(dbc.Card(dbc.CardBody(dcc.Graph(id="grafico-pagamento")), className="shadow-sm"), md=6),
+        ], className="mb-4"),
+
+        dbc.Card(dbc.CardBody(dcc.Graph(id="grafico-produtos")), className="mb-4 shadow-sm"),
+        dbc.Card(dbc.CardBody(dcc.Graph(id="grafico-vendedores")), className="mb-4 shadow-sm"),
     ]),
 
     # =========================
-    # PÁGINA VENDEDOR (ENVOLVENDO O QUE JÁ EXISTIA)
+    # PÁGINA VENDEDOR
     # =========================
     html.Div(id="pagina-vendedor", style={"display": "none"}, children=[
 
-        html.Hr(),
-        html.H2("👤 Dashboard Individual do Vendedor"),
+        dbc.Card(
+            dbc.CardBody([
+                html.H4("👤 Dashboard Individual do Vendedor", className="fw-bold mb-3"),
+                dbc.Row(
+                    dbc.Col(
+                        dcc.Dropdown(
+                            id="vendedor-individual",
+                            options=[{"label": v, "value": v} for v in df_inicial["vendedor"].unique()],
+                            placeholder="Escolha o vendedor"
+                        ),
+                        md=4
+                    )
+                )
+            ]),
+            className="mb-4 shadow-sm"
+        ),
 
-        html.Div(style={"width": "300px"}, children=[
-            html.Label("Selecione o vendedor"),
-            dcc.Dropdown(
-                id="vendedor-individual",
-                options=[{"label": v, "value": v} for v in df_inicial["vendedor"].unique()],
-                placeholder="Escolha um vendedor",
-                clearable=True
-            )
-        ]),
-
-        html.Div(id="kpis-vendedor"),
-        html.Div(dcc.Graph(id="grafico-vendedor-individual"))
-
+        dbc.Row(id="kpis-vendedor", className="g-3 mb-4"),
+        dbc.Card(dbc.CardBody(dcc.Graph(id="grafico-vendedor-individual")), className="shadow-sm")
     ]),
 
-    dcc.Interval(id="interval-atualizacao", interval=1800000, n_intervals=0),
+    dcc.Interval(id="interval-atualizacao", interval=1800000),
     dcc.Store(id="dados-vendas"),
     dcc.Store(id="store-meta", data=50000)
 ])
 
 # =========================
-# PAGINAÇÃO (ADICIONADO)
+# CALLBACKS
 # =========================
 @app.callback(
     Output("pagina-atual", "data"),
@@ -149,16 +192,14 @@ def mostrar_paginas(pagina):
         return {"display": "none"}, {"display": "block"}
     return {"display": "block"}, {"display": "none"}
 
-# =========================
-# CALLBACKS ORIGINAIS (SEM ALTERAÇÃO)
-# =========================
+
 @app.callback(Output("store-meta", "data"), Input("input-meta", "value"))
 def atualizar_meta(valor):
     return valor if valor and valor > 0 else 50000
 
 
 @app.callback(Output("dados-vendas", "data"), Input("interval-atualizacao", "n_intervals"))
-def atualizar_dados(n):
+def atualizar_dados(_):
     return carregar_dados().to_dict("records")
 
 
@@ -371,8 +412,5 @@ def atualizar_dashboard(dados, data_ini, data_fim, categorias, vendedores, meta_
         fig_vendedor_individual
     )
 
-# RUN
-server = app.server
-
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8050, debug=True)
+    app.run(debug=True)
