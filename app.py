@@ -23,7 +23,7 @@ df_inicial = carregar_dados()
 # =========================
 app = dash.Dash(
     __name__,
-    external_stylesheets=[dbc.themes.FLATLY],
+    external_stylesheets=[dbc.themes.FLATLY, "/assets/style.css"],
     suppress_callback_exceptions=True
 )
 
@@ -33,7 +33,7 @@ app.title = "Recanto da Fé"
 # =========================
 # LAYOUT
 # =========================
-app.layout = dbc.Container(fluid=True, className="p-4", children=[
+app.layout = dbc.Container(fluid=True, className="p-4", style={"backgroundColor": "#f8f9fa"}, children=[
 
     # =========================
     # TÍTULO
@@ -42,7 +42,7 @@ app.layout = dbc.Container(fluid=True, className="p-4", children=[
         dbc.Col(
             html.H1(
                 "Recanto da Fé – Dashboard de Vendas",
-                className="text-center fw-bold mb-4"
+                className="text-center fw-bold mb-4 main-title"
             )
         )
     ),
@@ -55,7 +55,7 @@ app.layout = dbc.Container(fluid=True, className="p-4", children=[
             dbc.ButtonGroup([
                 dbc.Button("📊 Dashboard Geral", id="btn-geral", n_clicks=0, color="primary"),
                 dbc.Button("👤 Dashboard por Vendedor", id="btn-vendedor", n_clicks=0, color="secondary"),
-            ]),
+            ], style={"box-shadow": "0 4px 6px rgba(0, 0, 0, 0.1)"}),
             className="text-center mb-4"
         )
     ),
@@ -67,78 +67,74 @@ app.layout = dbc.Container(fluid=True, className="p-4", children=[
     # =========================
     html.Div(id="pagina-geral", children=[
 
-        # META
-        dbc.Card(
-            dbc.CardBody(
-                dbc.Row([
-                    dbc.Col(html.Label("🎯 Meta Mensal (R$)", className="fw-semibold"), md="auto"),
-                    dbc.Col(
-                        dbc.Input(id="input-meta", type="number", value=50000, min=0, step=100),
-                        md=3
-                    )
-                ], align="center")
-            ),
-            className="mb-4 shadow-sm"
-        ),
-
-        # FILTROS
-        dbc.Card(
-            dbc.CardBody(
-                dbc.Row([
-                    dbc.Col([
-                        html.Label("📅 Período"),
-                        dcc.DatePickerRange(
-                            id="filtro-data",
-                            min_date_allowed=df_inicial["data_venda"].min(),
-                            max_date_allowed=df_inicial["data_venda"].max(),
-                            start_date=df_inicial["data_venda"].min(),
-                            end_date=df_inicial["data_venda"].max(),
-                            display_format="DD/MM/YYYY",
-                            with_portal=True
-                        )
-                    ], md=4),
-
-                    dbc.Col([
-                        html.Label("🏷️ Categoria"),
-                        dcc.Dropdown(
-                            id="filtro-categoria",
-                            options=[{"label": c, "value": c} for c in df_inicial["categoria"].unique()],
-                            multi=True,
-                            placeholder="Selecione",
-                            menuPortalTarget="body",
-                            menuPosition="fixed"
-                        )
-                    ], md=4),
-
-                    dbc.Col([
-                        html.Label("👤 Vendedor"),
-                        dcc.Dropdown(
-                            id="filtro-vendedor",
-                            options=[{"label": v, "value": v} for v in df_inicial["vendedor"].unique()],
-                            multi=True,
-                            placeholder="Selecione",
-                            menuPortalTarget="body",
-                            menuPosition="fixed"
-                        )
-                    ], md=4),
-                ])
-            ),
-            className="mb-4 shadow-sm"
-        ),
-
-        # KPIs
-        dbc.Row(id="kpis", className="g-3 mb-4"),
-
-        # GRÁFICOS
-        dbc.Card(dbc.CardBody(dcc.Graph(id="grafico-faturamento-tempo")), className="mb-4 shadow-sm"),
-
+        # META E FILTROS
         dbc.Row([
-            dbc.Col(dbc.Card(dbc.CardBody(dcc.Graph(id="grafico-categoria")), className="shadow-sm"), md=6),
-            dbc.Col(dbc.Card(dbc.CardBody(dcc.Graph(id="grafico-pagamento")), className="shadow-sm"), md=6),
+            dbc.Col(
+                dbc.Card(
+                    dbc.CardBody(
+                        dbc.Row([
+                            dbc.Col(html.Label("🎯 Meta Mensal (R$)", className="fw-semibold"), md="auto"),
+                            dbc.Col(
+                                dbc.Input(id="input-meta", type="number", value=50000, min=0, step=100),
+                                md=4
+                            )
+                        ], align="center")
+                    ), className="shadow-sm"
+                ), md=3
+            ),
+            dbc.Col(
+                dbc.Card(
+                    dbc.CardBody(
+                        dbc.Row([
+                            dbc.Col([
+                                html.Label("📅 Período"),
+                                dcc.DatePickerRange(
+                                    id="filtro-data",
+                                    min_date_allowed=df_inicial["data_venda"].min(),
+                                    max_date_allowed=df_inicial["data_venda"].max(),
+                                    start_date=df_inicial["data_venda"].min(),
+                                    end_date=df_inicial["data_venda"].max(),
+                                    display_format="DD/MM/YYYY"
+                                )
+                            ], md=4),
+                            dbc.Col([
+                                html.Label("🏷️ Categoria"),
+                                dcc.Dropdown(
+                                    id="filtro-categoria",
+                                    options=[{"label": c, "value": c} for c in df_inicial["categoria"].unique()],
+                                    multi=True, placeholder="Selecione"
+                                )
+                            ], md=4),
+                            dbc.Col([
+                                html.Label("👤 Vendedor"),
+                                dcc.Dropdown(
+                                    id="filtro-vendedor",
+                                    options=[{"label": v, "value": v} for v in df_inicial["vendedor"].unique()],
+                                    multi=True, placeholder="Selecione"
+                                )
+                            ], md=4),
+                        ])
+                    ),
+                    className="shadow-sm",
+                    style={"position": "relative", "z-index": "2"}
+                ), md=9
+            ),
         ], className="mb-4"),
 
-        dbc.Card(dbc.CardBody(dcc.Graph(id="grafico-produtos")), className="mb-4 shadow-sm"),
-        dbc.Card(dbc.CardBody(dcc.Graph(id="grafico-vendedores")), className="mb-4 shadow-sm"),
+
+        # KPIs
+        dbc.Row(id="kpis", className="g-4 mb-4"),
+
+        # GRÁFICOS
+        dbc.Card(dbc.CardBody(dcc.Graph(id="grafico-faturamento-tempo")), className="mb-4 chart-card"),
+
+        dbc.Row([
+            dbc.Col(dbc.Card(dbc.CardBody(dcc.Graph(id="grafico-categoria")), className="chart-card"), md=6),
+            dbc.Col(dbc.Card(dbc.CardBody(dcc.Graph(id="grafico-pagamento")), className="chart-card"), md=6),
+        ], className="mb-4 g-4"),
+
+        dbc.Card(dbc.CardBody(dcc.Graph(id="grafico-produtos")), className="mb-4 chart-card"),
+        dbc.Card(dbc.CardBody(dcc.Graph(id="grafico-vendedores")), className="mb-4 chart-card"),
     ]),
 
     # =========================
@@ -163,8 +159,8 @@ app.layout = dbc.Container(fluid=True, className="p-4", children=[
             className="mb-4 shadow-sm"
         ),
 
-        dbc.Row(id="kpis-vendedor", className="g-3 mb-4"),
-        dbc.Card(dbc.CardBody(dcc.Graph(id="grafico-vendedor-individual")), className="shadow-sm")
+        dbc.Row(id="kpis-vendedor", className="g-4 mb-4"),
+        dbc.Card(dbc.CardBody(dcc.Graph(id="grafico-vendedor-individual")), className="shadow-sm chart-card")
     ]),
 
     dcc.Interval(id="interval-atualizacao", interval=1800000),
@@ -208,6 +204,17 @@ def atualizar_dados(_):
     return carregar_dados().to_dict("records")
 
 
+def criar_kpi_card(title, value, subtext="", color_class=""):
+    return dbc.Col(
+        dbc.Card(
+            dbc.CardBody([
+                html.P(title, className="kpi-title"),
+                html.H3(value, className=f"kpi-value {color_class}"),
+                html.P(subtext, className="kpi-subtext"),
+            ])
+        , className="kpi-card")
+    )
+
 @app.callback(
     Output("kpis", "children"),
     Output("grafico-faturamento-tempo", "figure"),
@@ -228,13 +235,13 @@ def atualizar_dados(_):
 def atualizar_dashboard(dados, data_ini, data_fim, categorias, vendedores, meta_mensal, vendedor_individual):
 
     if not dados:
-        return dash.no_update
+        return [[] for _ in range(8)]
 
     df = pd.DataFrame(dados)
     df["data_venda"] = pd.to_datetime(df["data_venda"], errors='coerce')
     df = df.dropna(subset=["data_venda"])
     if df.empty:
-        return dash.no_update
+        return [[] for _ in range(8)]
 
     # FILTROS
     df_filtrado = df[(df["data_venda"] >= data_ini) & (df["data_venda"] <= data_fim)]
@@ -248,173 +255,100 @@ def atualizar_dashboard(dados, data_ini, data_fim, categorias, vendedores, meta_
     lucro = df_filtrado["lucro"].sum()
     vendas = df_filtrado["id_venda"].nunique()
     ticket = faturamento / vendas if vendas > 0 else 0
-
     faturamento_mes = faturamento
     percentual_meta = (faturamento_mes / meta_mensal) * 100 if meta_mensal > 0 else 0
 
-    # =========================
-    # META INDIVIDUAL + RANKING
-    # =========================
-    df_vendedor = (
-        df_filtrado
-        .groupby("vendedor")["valor_total_venda"]
-        .sum()
-        .reset_index()
-    )
-
+    df_vendedor = df_filtrado.groupby("vendedor")["valor_total_venda"].sum().reset_index()
     total_vendas = df_vendedor["valor_total_venda"].sum()
-
-    df_vendedor["peso"] = (
-        df_vendedor["valor_total_venda"] / total_vendas
-        if total_vendas > 0 else 0
-    )
-
+    df_vendedor["peso"] = (df_vendedor["valor_total_venda"] / total_vendas) if total_vendas > 0 else 0
     df_vendedor["meta_individual"] = df_vendedor["peso"] * meta_mensal
-
-    df_vendedor["percentual_meta"] = (
-        df_vendedor["valor_total_venda"] / df_vendedor["meta_individual"] * 100
-    ).replace([float("inf"), -float("inf")], 0).fillna(0)
+    df_vendedor["percentual_meta"] = (df_vendedor["valor_total_venda"] / df_vendedor["meta_individual"] * 100).replace([float("inf"), -float("inf")], 0).fillna(0)
 
     def status_vendedor(row):
-        if row["percentual_meta"] >= 100:
-            return "🟢 Meta batida"
-        elif row["percentual_meta"] >= 70:
-            return "🟠 Quase lá"
-        else:
-            return "🔴 Abaixo da meta"
-
+        if row["percentual_meta"] >= 100: return "🟢 Meta batida"
+        elif row["percentual_meta"] >= 70: return "🟠 Quase lá"
+        else: return "🔴 Abaixo da meta"
     df_vendedor["status"] = df_vendedor.apply(status_vendedor, axis=1)
 
     df_vendedor = df_vendedor.sort_values("percentual_meta", ascending=False).reset_index(drop=True)
     df_vendedor["ranking"] = df_vendedor.index + 1
-
     vendedores_bateram = (df_vendedor["percentual_meta"] >= 100).sum()
     top_vendedor = df_vendedor.iloc[0] if not df_vendedor.empty else None
 
     # STATUS META GERAL
     if faturamento_mes >= meta_mensal:
-        status_meta = "🎉 Meta batida! Excelente trabalho!"
-        cor_meta = "green"
-        icone_meta = "⬆️"
+        status_meta, cor_meta, icone_meta = "Meta Atingida!", "meta-ok", "🎉"
     elif percentual_meta >= 70:
-        status_meta = "⚠️ Meta próxima! Intensifique as vendas"
-        cor_meta = "orange"
-        icone_meta = "⚠️"
+        status_meta, cor_meta, icone_meta = "Quase lá!", "meta-warn", "⚠️"
     else:
-        status_meta = "🚨 Meta distante! Ação necessária"
-        cor_meta = "red"
-        icone_meta = "⬇️"
+        status_meta, cor_meta, icone_meta = "Abaixo da Meta", "meta-danger", "🚨"
 
     # KPIs GERAIS
     kpis = [
-        html.Div([html.H3("💰 Faturamento"), html.H4(f"R$ {faturamento:,.2f}")], className="card"),
-        html.Div([html.H3("📈 Lucro"), html.H4(f"R$ {lucro:,.2f}")], className="card"),
-        html.Div([html.H3("🧾 Vendas"), html.H4(vendas)], className="card"),
-        html.Div([html.H3("🛒 Ticket Médio"), html.H4(f"R$ {ticket:,.2f}")], className="card"),
-        html.Div([
-            html.H3("🎯 Meta Mensal"),
-            html.H4(f"R$ {faturamento_mes:,.2f} / R$ {meta_mensal:,.2f}"),
-            html.P(f"{icone_meta} {status_meta}", style={"color": cor_meta, "fontWeight": "bold"})
-        ], className="card"),
-        html.Div([
-            html.H3("🥇 Top Vendedor"),
-            html.H4(top_vendedor["vendedor"] if top_vendedor is not None else "-"),
-            html.P(f"{top_vendedor['percentual_meta']:.1f}% da meta" if top_vendedor is not None else "")
-        ], className="card"),
-        html.Div([
-            html.H3("👥 Vendedores na Meta"),
-            html.H4(vendedores_bateram)
-        ], className="card")
+        criar_kpi_card("💰 FATURAMENTO TOTAL", f"R$ {faturamento:,.2f}"),
+        criar_kpi_card("📈 LUCRO TOTAL", f"R$ {lucro:,.2f}"),
+        criar_kpi_card("🧾 Nº DE VENDAS", f"{vendas}"),
+        criar_kpi_card("🛒 TICKET MÉDIO", f"R$ {ticket:,.2f}"),
+        criar_kpi_card("🎯 META MENSAL", f"{percentual_meta:.1f}%", f"{icone_meta} {status_meta}", cor_meta),
+        criar_kpi_card("🥇 TOP VENDEDOR", top_vendedor["vendedor"] if top_vendedor is not None else "-", f"{top_vendedor['percentual_meta']:.1f}% da meta" if top_vendedor is not None else ""),
+        criar_kpi_card("👥 VENDEDORES NA META", f"{vendedores_bateram}")
     ]
 
-    # =========================
     # DASHBOARD INDIVIDUAL
-    # =========================
     if vendedor_individual and vendedor_individual in df_vendedor["vendedor"].values:
         dados_v = df_vendedor[df_vendedor["vendedor"] == vendedor_individual].iloc[0]
+        status_v_ind_text = dados_v['status'].split(' ')[1]
+        
+        if "batida" in status_v_ind_text: status_v_ind_color = "meta-ok"
+        elif "Quase" in status_v_ind_text: status_v_ind_color = "meta-warn"
+        else: status_v_ind_color = "meta-danger"
 
         kpis_vendedor = [
-            html.Div([html.H3("👤 Vendedor"), html.H4(vendedor_individual)], className="card"),
-            html.Div([html.H3("💰 Faturamento"), html.H4(f"R$ {dados_v['valor_total_venda']:,.2f}")], className="card"),
-            html.Div([html.H3("🎯 Meta Individual"), html.H4(f"R$ {dados_v['meta_individual']:,.2f}")], className="card"),
-            html.Div([
-                html.H3("📊 Atingimento"),
-                html.H4(f"{dados_v['percentual_meta']:.1f}%"),
-                html.P(dados_v["status"])
-            ], className="card"),
-            html.Div([html.H3("🏆 Ranking"), html.H4(f"{int(dados_v['ranking'])}º lugar")], className="card")
+            criar_kpi_card("👤 VENDEDOR", vendedor_individual),
+            criar_kpi_card("💰 FATURAMENTO", f"R$ {dados_v['valor_total_venda']:,.2f}"),
+            criar_kpi_card("🎯 META INDIVIDUAL", f"R$ {dados_v['meta_individual']:,.2f}"),
+            criar_kpi_card("📊 ATINGIMENTO", f"{dados_v['percentual_meta']:.1f}%", dados_v["status"], status_v_ind_color),
+            criar_kpi_card("🏆 RANKING GERAL", f"{int(dados_v['ranking'])}º")
         ]
-
         df_v_ind = df_filtrado[df_filtrado["vendedor"] == vendedor_individual]
         fig_vendedor_individual = px.line(
-            df_v_ind.groupby("data_venda")["valor_total_venda"].sum().reset_index(),
-            x="data_venda",
-            y="valor_total_venda",
-            title=f"📈 Evolução de Vendas – {vendedor_individual}",
-            markers=True
+            df_v_ind.groupby(df_v_ind['data_venda'].dt.date)["valor_total_venda"].sum().reset_index(),
+            x="data_venda", y="valor_total_venda", title=f"📈 Evolução de Vendas – {vendedor_individual}", markers=True,
+            template="plotly_white"
         )
+        fig_vendedor_individual.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
     else:
-        kpis_vendedor = html.Div("Selecione um vendedor para visualizar o desempenho individual.")
-        fig_vendedor_individual = px.line(title="Selecione um vendedor")
+        kpis_vendedor = [dbc.Col(dbc.Alert("Selecione um vendedor para ver seu desempenho.", color="info"))]
+        fig_vendedor_individual = {}
 
-    # =========================
     # GRÁFICOS
-    # =========================
     fig_tempo = px.line(
-        df_filtrado.groupby("data_venda")["valor_total_venda"].sum().reset_index(),
-        x="data_venda", y="valor_total_venda",
-        title="Faturamento ao Longo do Tempo",
-        markers=True
-    )
-
+        df_filtrado.groupby(df['data_venda'].dt.date)["valor_total_venda"].sum().reset_index(),
+        x="data_venda", y="valor_total_venda", title="Faturamento ao Longo do Tempo", markers=True, template="plotly_white")
     fig_categoria = px.bar(
-        df_filtrado.groupby("categoria")["valor_total_venda"].sum().reset_index(),
-        x="categoria", y="valor_total_venda",
-        title="Faturamento por Categoria",
-        color="categoria"
-    )
-
+        df_filtrado.groupby("categoria")["valor_total_venda"].sum().reset_index().sort_values("valor_total_venda", ascending=False),
+        x="categoria", y="valor_total_venda", title="Faturamento por Categoria", color="categoria", template="plotly_white")
     fig_pagamento = px.pie(
-        df_filtrado,
-        names="forma_pagamento",
-        values="valor_total_venda",
-        title="Forma de Pagamento"
-    )
-
+        df_filtrado, names="forma_pagamento", values="valor_total_venda", title="Forma de Pagamento", hole=0.4, template="plotly_white")
     fig_produtos = px.bar(
-        df_filtrado.groupby("produto")["quantidade_venda"].sum()
-        .sort_values(ascending=False).head(10).reset_index(),
-        x="produto", y="quantidade_venda",
-        title="Top 10 Produtos",
-        color="produto"
-    )
-
-    fig_vendedores = px.bar(
-        df_vendedor,
-        x="vendedor",
-        y="valor_total_venda",
-        color="status",
-        text=df_vendedor["percentual_meta"].round(1).astype(str) + "%",
-        title="🏆 Ranking de Vendedores – Meta Individual",
-        color_discrete_map={
-            "🟢 Meta batida": "#2ecc71",
-            "🟠 Quase lá": "#f1c40f",
-            "🔴 Abaixo da meta": "#e74c3c"
-        }
-    )
+        df_filtrado.groupby("produto")["quantidade_venda"].sum().sort_values(ascending=False).head(10).reset_index(),
+        y="produto", x="quantidade_venda", title="Top 10 Produtos Mais Vendidos", color="produto", orientation='h', template="plotly_white")
+    fig_vendedores = px.bar(df_vendedor, x="vendedor", y="valor_total_venda", color="status",
+        text=df_vendedor["percentual_meta"].round(1).astype(str) + "%", title="🏆 Ranking de Vendedores vs. Meta Individual",
+        color_discrete_map={"🟢 Meta batida": "#28a745", "🟠 Quase lá": "#ffc107", "🔴 Abaixo da meta": "#dc3545"},
+        template="plotly_white")
+    
+    for fig in [fig_tempo, fig_categoria, fig_pagamento, fig_produtos, fig_vendedores, fig_vendedor_individual]:
+        if fig:
+            fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font_color="#343a40")
 
     fig_vendedores.update_traces(textposition="outside")
-    fig_vendedores.update_layout(xaxis_categoryorder="total descending")
+    fig_vendedores.update_layout(xaxis_categoryorder="total descending", yaxis_title=None, xaxis_title=None)
+    fig_produtos.update_layout(yaxis_categoryorder='total ascending', xaxis_title=None, yaxis_title=None)
+    fig_categoria.update_layout(xaxis_title=None, yaxis_title=None)
 
     return (
-        kpis,
-        fig_tempo,
-        fig_categoria,
-        fig_pagamento,
-        fig_produtos,
-        fig_vendedores,
-        kpis_vendedor,
-        fig_vendedor_individual
+        kpis, fig_tempo, fig_categoria, fig_pagamento, fig_produtos, fig_vendedores, kpis_vendedor, fig_vendedor_individual
     )
 
 if __name__ == "__main__":

@@ -1,216 +1,54 @@
-/* =========================
-   BASE
-========================= */
+/* General Body Style */
 body {
-    background-color: #f4f6f9;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    margin: 0;
-    padding: 0;
-    color: #1f2d3d;
+    background-color: #f8f9fa;
 }
 
-h1 {
-    font-size: 34px;
-    font-weight: 700;
+/* Main Title */
+.main-title {
+    color: #343a40;
+}
+
+/* KPI Card Styling */
+.kpi-card {
+    background-color: #ffffff;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    padding: 1rem;
     text-align: center;
-    margin-bottom: 35px;
-    color: #1f2d3d;
-    letter-spacing: -0.5px;
-}
-
-h2 {
-    margin-top: 40px;
-    margin-bottom: 15px;
-    font-size: 22px;
-    font-weight: 700;
-    color: #1f2d3d;
-}
-
-/* =========================
-   BOTÕES TOPO (PAGINAÇÃO)
-========================= */
-button {
-    background: #ffffff;
-    border: 1px solid #dcdfe6;
-    padding: 10px 20px;
-    border-radius: 999px; /* pill button */
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.25s ease;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-}
-
-button:hover {
-    background: linear-gradient(135deg, #409eff, #66b1ff);
-    color: #ffffff;
-    border-color: transparent;
-    transform: translateY(-1px);
-}
-
-/* =========================
-   FILTROS
-========================= */
-.filtros {
-    background-color: #ffffff;
-    padding: 22px;
-    border-radius: 18px;
-    box-shadow: 0 8px 22px rgba(0,0,0,0.08);
-    margin-bottom: 35px;
+    height: 100%;
     display: flex;
-    flex-wrap: wrap;
-    gap: 22px;
-}
-
-.filtros label {
-    font-weight: 600;
-    font-size: 13px;
-    margin-bottom: 6px;
-    display: block;
-    color: #34495e;
-}
-
-/* =========================
-   META INPUT
-========================= */
-.meta-container {
-    display: flex;
+    flex-direction: column;
     justify-content: center;
-    align-items: center;
-    margin-bottom: 30px;
-    gap: 12px;
 }
 
-.meta-container label {
+.kpi-card .kpi-title {
+    font-size: 0.9rem;
     font-weight: 600;
-    font-size: 14px;
+    color: #6c757d;
+    margin-bottom: 0.5rem;
 }
 
-.meta-container input {
-    padding: 9px 16px;
-    border-radius: 12px;
-    border: 1px solid #dcdfe6;
-    font-size: 14px;
-    transition: border 0.2s ease;
-}
-
-.meta-container input:focus {
-    outline: none;
-    border-color: #409eff;
-}
-
-/* =========================
-   KPIs
-========================= */
-#kpis,
-#kpis-vendedor {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 22px;
-    margin-bottom: 40px;
-}
-
-.card {
-    background-color: #ffffff;
-    padding: 22px;
-    border-radius: 20px;
-    box-shadow: 0 10px 28px rgba(0,0,0,0.08);
-    position: relative;
-    transition: all 0.25s ease;
-    border-left: 6px solid #409eff;
-}
-
-.card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 14px 34px rgba(0,0,0,0.12);
-}
-
-.card h3 {
-    margin: 0;
-    font-size: 13px;
-    font-weight: 600;
-    color: #7f8c8d;
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-}
-
-.card h4 {
-    margin-top: 10px;
-    font-size: 26px;
+.kpi-card .kpi-value {
+    font-size: 1.75rem;
     font-weight: 700;
-    color: #1f2d3d;
+    color: #343a40;
+    margin-bottom: 0;
 }
 
-.card p {
-    margin-top: 6px;
-    font-size: 13px;
-    color: #555;
+.kpi-card .kpi-subtext {
+    font-size: 0.8rem;
+    color: #6c757d;
 }
 
-/* =========================
-   GRÁFICOS (CORREÇÃO DEFINITIVA)
-========================= */
-.graph-card {
-    background-color: #ffffff;
-    padding: 22px;
-    border-radius: 20px;
-    box-shadow: 0 10px 28px rgba(0,0,0,0.08);
-    margin-bottom: 35px;
-    height: 420px;
+/* Meta Status Colors */
+.meta-ok { color: #28a745; }
+.meta-warn { color: #ffc107; }
+.meta-danger { color: #dc3545; }
+
+/* Chart Styling */
+.chart-card {
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
-
-/* impede crescimento infinito */
-.js-plotly-plot,
-.plotly,
-.dash-graph {
-    height: 100% !important;
-}
-
-/* =========================
-   DASHBOARD VENDEDOR
-========================= */
-#pagina-vendedor {
-    animation: fadeIn 0.4s ease;
-}
-
-/* =========================
-   ANIMAÇÕES
-========================= */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(12px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* =========================
-   RESPONSIVO
-========================= */
-@media (max-width: 768px) {
-    .filtros {
-        flex-direction: column;
-    }
-
-    h1 {
-        font-size: 26px;
-    }
-
-    .graph-card {
-        height: 360px;
-    }
-}
-/* Compactar dropdown */
-.Select-control {
-    min-height: 36px;
-    height: 36px;
-    border-radius: 10px;
-    font-size: 13px;
-}
-
-.Select-value {
-    line-height: 34px !important;
-}
-
