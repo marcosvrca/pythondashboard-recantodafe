@@ -25,91 +25,132 @@ app.layout = html.Div(style={"padding": "20px"}, children=[
 
     html.H1("🏪 Recanto da Fé – Dashboard de Vendas"),
 
-    html.Div(className="meta-container", children=[
-        html.Label("💡 Defina a Meta Mensal (R$):"),
-        dcc.Input(
-            id="input-meta",
-            type="number",
-            value=50000,
-            min=0,
-            step=100,
-            style={"width": "150px"}
-        )
+    # BOTÕES (ADICIONADO)
+    html.Div(style={"marginBottom": "20px"}, children=[
+        html.Button("📊 Dashboard Geral", id="btn-geral", n_clicks=0),
+        html.Button("👤 Dashboard por Vendedor", id="btn-vendedor", n_clicks=0)
     ]),
 
-    # FILTROS
-    html.Div(className="filtros", children=[
-        html.Div(style={"flex": "1"}, children=[
-            html.Label("📅 Filtrar por período"),
-            dcc.DatePickerRange(
-                id="filtro-data",
-                min_date_allowed=df_inicial["data_venda"].min(),
-                max_date_allowed=df_inicial["data_venda"].max(),
-                start_date=df_inicial["data_venda"].min(),
-                end_date=df_inicial["data_venda"].max(),
-                display_format="DD/MM/YYYY",
-                style={"width": "100%"}
+    dcc.Store(id="pagina-atual", data="geral"),
+
+    # =========================
+    # PÁGINA GERAL (ENVOLVENDO O QUE JÁ EXISTIA)
+    # =========================
+    html.Div(id="pagina-geral", children=[
+
+        html.Div(className="meta-container", children=[
+            html.Label("💡 Defina a Meta Mensal (R$):"),
+            dcc.Input(
+                id="input-meta",
+                type="number",
+                value=50000,
+                min=0,
+                step=100,
+                style={"width": "150px"}
             )
         ]),
-        html.Div(style={"flex": "1"}, children=[
-            html.Label("🏷️ Filtrar por categoria"),
-            dcc.Dropdown(
-                id="filtro-categoria",
-                options=[{"label": c, "value": c} for c in df_inicial["categoria"].unique()],
-                placeholder="Filtrar por tipo...",
-                multi=True
-            )
+
+        # FILTROS
+        html.Div(className="filtros", children=[
+            html.Div(style={"flex": "1"}, children=[
+                html.Label("📅 Filtrar por período"),
+                dcc.DatePickerRange(
+                    id="filtro-data",
+                    min_date_allowed=df_inicial["data_venda"].min(),
+                    max_date_allowed=df_inicial["data_venda"].max(),
+                    start_date=df_inicial["data_venda"].min(),
+                    end_date=df_inicial["data_venda"].max(),
+                    display_format="DD/MM/YYYY",
+                    style={"width": "100%"}
+                )
+            ]),
+            html.Div(style={"flex": "1"}, children=[
+                html.Label("🏷️ Filtrar por categoria"),
+                dcc.Dropdown(
+                    id="filtro-categoria",
+                    options=[{"label": c, "value": c} for c in df_inicial["categoria"].unique()],
+                    placeholder="Filtrar por tipo...",
+                    multi=True
+                )
+            ]),
+            html.Div(style={"flex": "1"}, children=[
+                html.Label("👤 Filtrar por vendedor (geral)"),
+                dcc.Dropdown(
+                    id="filtro-vendedor",
+                    options=[{"label": v, "value": v} for v in df_inicial["vendedor"].unique()],
+                    placeholder="Filtrar por...",
+                    multi=True
+                )
+            ])
         ]),
-        html.Div(style={"flex": "1"}, children=[
-            html.Label("👤 Filtrar por vendedor (geral)"),
+
+        html.Div(id="kpis"),
+
+        html.Div(dcc.Graph(id="grafico-faturamento-tempo")),
+        html.Div(style={"display": "flex", "gap": "20px", "flexWrap": "wrap"}, children=[
+            html.Div(dcc.Graph(id="grafico-categoria"), style={"flex": "1"}),
+            html.Div(dcc.Graph(id="grafico-pagamento"), style={"flex": "1"})
+        ]),
+        html.Div(dcc.Graph(id="grafico-produtos")),
+        html.Div(dcc.Graph(id="grafico-vendedores")),
+
+    ]),
+
+    # =========================
+    # PÁGINA VENDEDOR (ENVOLVENDO O QUE JÁ EXISTIA)
+    # =========================
+    html.Div(id="pagina-vendedor", style={"display": "none"}, children=[
+
+        html.Hr(),
+        html.H2("👤 Dashboard Individual do Vendedor"),
+
+        html.Div(style={"width": "300px"}, children=[
+            html.Label("Selecione o vendedor"),
             dcc.Dropdown(
-                id="filtro-vendedor",
+                id="vendedor-individual",
                 options=[{"label": v, "value": v} for v in df_inicial["vendedor"].unique()],
-                placeholder="Filtrar por...",
-                multi=True
+                placeholder="Escolha um vendedor",
+                clearable=True
             )
-        ])
+        ]),
+
+        html.Div(id="kpis-vendedor"),
+        html.Div(dcc.Graph(id="grafico-vendedor-individual"))
+
     ]),
 
-    # KPIs GERAIS
-    html.Div(id="kpis"),
-
-    # GRÁFICOS GERAIS
-    html.Div(dcc.Graph(id="grafico-faturamento-tempo")),
-    html.Div(style={"display": "flex", "gap": "20px", "flexWrap": "wrap"}, children=[
-        html.Div(dcc.Graph(id="grafico-categoria"), style={"flex": "1"}),
-        html.Div(dcc.Graph(id="grafico-pagamento"), style={"flex": "1"})
-    ]),
-    html.Div(dcc.Graph(id="grafico-produtos")),
-    html.Div(dcc.Graph(id="grafico-vendedores")),
-
-    # =========================
-    # DASHBOARD INDIVIDUAL
-    # =========================
-    html.Hr(),
-    html.H2("👤 Dashboard Individual do Vendedor"),
-
-    html.Div(style={"width": "300px"}, children=[
-        html.Label("Selecione o vendedor"),
-        dcc.Dropdown(
-            id="vendedor-individual",
-            options=[{"label": v, "value": v} for v in df_inicial["vendedor"].unique()],
-            placeholder="Escolha um vendedor",
-            clearable=True
-        )
-    ]),
-
-    html.Div(id="kpis-vendedor"),
-    html.Div(dcc.Graph(id="grafico-vendedor-individual")),
-
-    # CONTROLES
     dcc.Interval(id="interval-atualizacao", interval=1800000, n_intervals=0),
     dcc.Store(id="dados-vendas"),
     dcc.Store(id="store-meta", data=50000)
 ])
 
 # =========================
-# CALLBACKS
+# PAGINAÇÃO (ADICIONADO)
+# =========================
+@app.callback(
+    Output("pagina-atual", "data"),
+    Input("btn-geral", "n_clicks"),
+    Input("btn-vendedor", "n_clicks"),
+    prevent_initial_call=True
+)
+def trocar_pagina(btn_geral, btn_vendedor):
+    ctx = dash.callback_context
+    botao = ctx.triggered[0]["prop_id"].split(".")[0]
+    return "vendedor" if botao == "btn-vendedor" else "geral"
+
+
+@app.callback(
+    Output("pagina-geral", "style"),
+    Output("pagina-vendedor", "style"),
+    Input("pagina-atual", "data")
+)
+def mostrar_paginas(pagina):
+    if pagina == "vendedor":
+        return {"display": "none"}, {"display": "block"}
+    return {"display": "block"}, {"display": "none"}
+
+# =========================
+# CALLBACKS ORIGINAIS (SEM ALTERAÇÃO)
 # =========================
 @app.callback(Output("store-meta", "data"), Input("input-meta", "value"))
 def atualizar_meta(valor):
@@ -118,8 +159,7 @@ def atualizar_meta(valor):
 
 @app.callback(Output("dados-vendas", "data"), Input("interval-atualizacao", "n_intervals"))
 def atualizar_dados(n):
-    df = carregar_dados()
-    return df.to_dict("records")
+    return carregar_dados().to_dict("records")
 
 
 @app.callback(
