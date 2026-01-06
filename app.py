@@ -41,7 +41,7 @@ app.layout = dbc.Container(fluid=True, className="p-4", children=[
     dbc.Row(
         dbc.Col(
             html.H1(
-                "🏪 Recanto da Fé – Dashboard de Vendas",
+                "Recanto da Fé – Dashboard de Vendas",
                 className="text-center fw-bold mb-4"
             )
         )
@@ -93,7 +93,8 @@ app.layout = dbc.Container(fluid=True, className="p-4", children=[
                             max_date_allowed=df_inicial["data_venda"].max(),
                             start_date=df_inicial["data_venda"].min(),
                             end_date=df_inicial["data_venda"].max(),
-                            display_format="DD/MM/YYYY"
+                            display_format="DD/MM/YYYY",
+                            with_portal=True
                         )
                     ], md=4),
 
@@ -103,7 +104,9 @@ app.layout = dbc.Container(fluid=True, className="p-4", children=[
                             id="filtro-categoria",
                             options=[{"label": c, "value": c} for c in df_inicial["categoria"].unique()],
                             multi=True,
-                            placeholder="Selecione"
+                            placeholder="Selecione",
+                            menuPortalTarget="body",
+                            menuPosition="fixed"
                         )
                     ], md=4),
 
@@ -113,7 +116,9 @@ app.layout = dbc.Container(fluid=True, className="p-4", children=[
                             id="filtro-vendedor",
                             options=[{"label": v, "value": v} for v in df_inicial["vendedor"].unique()],
                             multi=True,
-                            placeholder="Selecione"
+                            placeholder="Selecione",
+                            menuPortalTarget="body",
+                            menuPosition="fixed"
                         )
                     ], md=4),
                 ])

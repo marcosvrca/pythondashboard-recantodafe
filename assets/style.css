@@ -202,3 +202,15 @@ button:hover {
         height: 360px;
     }
 }
+/* Compactar dropdown */
+.Select-control {
+    min-height: 36px;
+    height: 36px;
+    border-radius: 10px;
+    font-size: 13px;
+}
+
+.Select-value {
+    line-height: 34px !important;
+}
+
