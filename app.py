@@ -129,11 +129,40 @@ def atualizar_dashboard(dados, data_ini, data_fim, categorias, vendedores, meta_
     vendas = df_filtrado["id_venda"].nunique() if not df_filtrado.empty else 0
     ticket = faturamento / vendas if vendas > 0 else 0
 
-    
     # META (baseada no período selecionado)
     faturamento_mes = df_filtrado["valor_total_venda"].sum() if not df_filtrado.empty else 0
-
     percentual_meta = (faturamento_mes / meta_mensal) * 100 if meta_mensal > 0 else 0
+
+    # =========================
+    # META POR VENDEDOR (ADICIONADO)
+    # =========================
+    df_vendedor = (
+        df_filtrado
+        .groupby("vendedor")["valor_total_venda"]
+        .sum()
+        .reset_index()
+    )
+
+    qtd_vendedores = df_vendedor["vendedor"].nunique()
+    meta_por_vendedor = meta_mensal / qtd_vendedores if qtd_vendedores > 0 else 0
+
+    df_vendedor["percentual_meta"] = (
+        df_vendedor["valor_total_venda"] / meta_por_vendedor * 100
+        if meta_por_vendedor > 0 else 0
+    )
+
+    def status_vendedor(row):
+        if row["valor_total_venda"] >= meta_por_vendedor:
+            return "🟢 Meta batida"
+        elif row["percentual_meta"] >= 70:
+            return "🟠 Quase lá"
+        else:
+            return "🔴 Abaixo da meta"
+
+    df_vendedor["status"] = df_vendedor.apply(status_vendedor, axis=1)
+
+    vendedores_bateram = (df_vendedor["valor_total_venda"] >= meta_por_vendedor).sum()
+    # =========================
 
     if faturamento_mes >= meta_mensal:
         status_meta = "🎉 Meta batida! Excelente trabalho!"
@@ -148,16 +177,23 @@ def atualizar_dashboard(dados, data_ini, data_fim, categorias, vendedores, meta_
         cor_meta = "red"
         icone_meta = "⬇️"
 
-
     # Cards KPI
     kpis = [
         html.Div([html.H3("💰 Faturamento"), html.H4(f"R$ {faturamento:,.2f}"), html.Div("📈", className="icone")], className="card"),
         html.Div([html.H3("📈 Lucro"), html.H4(f"R$ {lucro:,.2f}"), html.Div("💹", className="icone")], className="card"),
         html.Div([html.H3("🧾 Vendas"), html.H4(vendas), html.Div("🛒", className="icone")], className="card"),
         html.Div([html.H3("🛒 Ticket Médio"), html.H4(f"R$ {ticket:,.2f}"), html.Div("📝", className="icone")], className="card"),
-        html.Div([html.H3("🏆 Meta Mensal"), html.H4(f"R$ {faturamento_mes:,.2f} / R$ {meta_mensal:,.2f}"),
-                  html.P(f"{icone_meta} {status_meta}", style={"color": cor_meta, "fontWeight": "bold"}), html.Div("🎯", className="icone")],
-                 className="card")
+        html.Div([
+            html.H3("🏆 Meta Mensal"),
+            html.H4(f"R$ {faturamento_mes:,.2f} / R$ {meta_mensal:,.2f}"),
+            html.P(f"{icone_meta} {status_meta}", style={"color": cor_meta, "fontWeight": "bold"}),
+            html.Div("🎯", className="icone")
+        ], className="card"),
+        html.Div([
+            html.H3("👥 Vendedores na Meta"),
+            html.H4(vendedores_bateram),
+            html.Div("🏅", className="icone")
+        ], className="card")
     ]
 
     # GRÁFICOS
@@ -169,23 +205,66 @@ def atualizar_dashboard(dados, data_ini, data_fim, categorias, vendedores, meta_
         fig_vendedores = px.bar(title="Vendas por Vendedor (sem dados)")
         return kpis, fig_tempo, fig_categoria, fig_pagamento, fig_produtos, fig_vendedores
 
-    fig_tempo = px.line(df_filtrado.groupby("data_venda")["valor_total_venda"].sum().reset_index(),
-                        x="data_venda", y="valor_total_venda", title="Faturamento ao Longo do Tempo",
-                        markers=True)
-    fig_categoria = px.bar(df_filtrado.groupby("categoria")["valor_total_venda"].sum().reset_index(),
-                           x="categoria", y="valor_total_venda", title="Faturamento por Categoria", color="categoria")
-    fig_pagamento = px.pie(df_filtrado, names="forma_pagamento", values="valor_total_venda", title="Forma de Pagamento")
-    fig_produtos = px.bar(df_filtrado.groupby("produto")["quantidade_venda"].sum()
-                          .sort_values(ascending=False).head(10).reset_index(),
-                          x="produto", y="quantidade_venda", title="Top 10 Produtos", color="produto")
-    fig_vendedores = px.bar(df_filtrado.groupby("vendedor")["valor_total_venda"].sum().reset_index(),
-                            x="vendedor", y="valor_total_venda", title="Vendas por Vendedor", color="vendedor")
+    fig_tempo = px.line(
+        df_filtrado.groupby("data_venda")["valor_total_venda"].sum().reset_index(),
+        x="data_venda", y="valor_total_venda",
+        title="Faturamento ao Longo do Tempo",
+        markers=True
+    )
+
+    fig_categoria = px.bar(
+        df_filtrado.groupby("categoria")["valor_total_venda"].sum().reset_index(),
+        x="categoria", y="valor_total_venda",
+        title="Faturamento por Categoria",
+        color="categoria"
+    )
+
+    fig_pagamento = px.pie(
+        df_filtrado,
+        names="forma_pagamento",
+        values="valor_total_venda",
+        title="Forma de Pagamento"
+    )
+
+    fig_produtos = px.bar(
+        df_filtrado.groupby("produto")["quantidade_venda"].sum()
+        .sort_values(ascending=False).head(10).reset_index(),
+        x="produto", y="quantidade_venda",
+        title="Top 10 Produtos",
+        color="produto"
+    )
+
+    # =========================
+    # GRÁFICO META POR VENDEDOR (SUBSTITUÍDO)
+    # =========================
+    fig_vendedores = px.bar(
+        df_vendedor,
+        x="vendedor",
+        y="valor_total_venda",
+        text=df_vendedor["percentual_meta"].round(1).astype(str) + "%",
+        title="Meta Mensal por Vendedor",
+        color="status",
+        color_discrete_map={
+            "🟢 Meta batida": "#2ecc71",
+            "🟠 Quase lá": "#f1c40f",
+            "🔴 Abaixo da meta": "#e74c3c"
+        }
+    )
+
+    fig_vendedores.update_traces(textposition="outside")
+    fig_vendedores.update_layout(
+        yaxis_title="Faturamento (R$)",
+        xaxis_title="Vendedor",
+        uniformtext_minsize=8,
+        uniformtext_mode="hide"
+    )
+    # =========================
 
     return kpis, fig_tempo, fig_categoria, fig_pagamento, fig_produtos, fig_vendedores
+
 
 # RUN
 server = app.server
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8050, debug=True)
-
