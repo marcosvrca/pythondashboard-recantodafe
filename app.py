@@ -18,10 +18,13 @@ df_inicial = carregar_dados()
 app = dash.Dash(__name__)
 app.title = "Recanto da Fé"
 
+# =========================
 # LAYOUT
+# =========================
 app.layout = html.Div(style={"padding": "20px"}, children=[
 
     html.H1("🏪 Recanto da Fé – Dashboard de Vendas"),
+
     html.Div(className="meta-container", children=[
         html.Label("💡 Defina a Meta Mensal (R$):"),
         dcc.Input(
@@ -58,7 +61,7 @@ app.layout = html.Div(style={"padding": "20px"}, children=[
             )
         ]),
         html.Div(style={"flex": "1"}, children=[
-            html.Label("👤 Filtrar por vendedor"),
+            html.Label("👤 Filtrar por vendedor (geral)"),
             dcc.Dropdown(
                 id="filtro-vendedor",
                 options=[{"label": v, "value": v} for v in df_inicial["vendedor"].unique()],
@@ -68,10 +71,10 @@ app.layout = html.Div(style={"padding": "20px"}, children=[
         ])
     ]),
 
-    # KPIs
+    # KPIs GERAIS
     html.Div(id="kpis"),
 
-    # GRÁFICOS
+    # GRÁFICOS GERAIS
     html.Div(dcc.Graph(id="grafico-faturamento-tempo")),
     html.Div(style={"display": "flex", "gap": "20px", "flexWrap": "wrap"}, children=[
         html.Div(dcc.Graph(id="grafico-categoria"), style={"flex": "1"}),
@@ -80,13 +83,34 @@ app.layout = html.Div(style={"padding": "20px"}, children=[
     html.Div(dcc.Graph(id="grafico-produtos")),
     html.Div(dcc.Graph(id="grafico-vendedores")),
 
+    # =========================
+    # DASHBOARD INDIVIDUAL
+    # =========================
+    html.Hr(),
+    html.H2("👤 Dashboard Individual do Vendedor"),
+
+    html.Div(style={"width": "300px"}, children=[
+        html.Label("Selecione o vendedor"),
+        dcc.Dropdown(
+            id="vendedor-individual",
+            options=[{"label": v, "value": v} for v in df_inicial["vendedor"].unique()],
+            placeholder="Escolha um vendedor",
+            clearable=True
+        )
+    ]),
+
+    html.Div(id="kpis-vendedor"),
+    html.Div(dcc.Graph(id="grafico-vendedor-individual")),
+
+    # CONTROLES
     dcc.Interval(id="interval-atualizacao", interval=1800000, n_intervals=0),
     dcc.Store(id="dados-vendas"),
     dcc.Store(id="store-meta", data=50000)
 ])
 
-
+# =========================
 # CALLBACKS
+# =========================
 @app.callback(Output("store-meta", "data"), Input("input-meta", "value"))
 def atualizar_meta(valor):
     return valor if valor and valor > 0 else 50000
@@ -105,14 +129,17 @@ def atualizar_dados(n):
     Output("grafico-pagamento", "figure"),
     Output("grafico-produtos", "figure"),
     Output("grafico-vendedores", "figure"),
+    Output("kpis-vendedor", "children"),
+    Output("grafico-vendedor-individual", "figure"),
     Input("dados-vendas", "data"),
     Input("filtro-data", "start_date"),
     Input("filtro-data", "end_date"),
     Input("filtro-categoria", "value"),
     Input("filtro-vendedor", "value"),
-    Input("store-meta", "data")
+    Input("store-meta", "data"),
+    Input("vendedor-individual", "value")
 )
-def atualizar_dashboard(dados, data_ini, data_fim, categorias, vendedores, meta_mensal):
+def atualizar_dashboard(dados, data_ini, data_fim, categorias, vendedores, meta_mensal, vendedor_individual):
 
     if not dados:
         return dash.no_update
@@ -159,8 +186,7 @@ def atualizar_dashboard(dados, data_ini, data_fim, categorias, vendedores, meta_
     df_vendedor["meta_individual"] = df_vendedor["peso"] * meta_mensal
 
     df_vendedor["percentual_meta"] = (
-        df_vendedor["valor_total_venda"] /
-        df_vendedor["meta_individual"] * 100
+        df_vendedor["valor_total_venda"] / df_vendedor["meta_individual"] * 100
     ).replace([float("inf"), -float("inf")], 0).fillna(0)
 
     def status_vendedor(row):
@@ -173,16 +199,11 @@ def atualizar_dashboard(dados, data_ini, data_fim, categorias, vendedores, meta_
 
     df_vendedor["status"] = df_vendedor.apply(status_vendedor, axis=1)
 
-    df_vendedor = df_vendedor.sort_values(
-        by="percentual_meta",
-        ascending=False
-    ).reset_index(drop=True)
-
+    df_vendedor = df_vendedor.sort_values("percentual_meta", ascending=False).reset_index(drop=True)
     df_vendedor["ranking"] = df_vendedor.index + 1
 
     vendedores_bateram = (df_vendedor["percentual_meta"] >= 100).sum()
     top_vendedor = df_vendedor.iloc[0] if not df_vendedor.empty else None
-    # =========================
 
     # STATUS META GERAL
     if faturamento_mes >= meta_mensal:
@@ -198,7 +219,7 @@ def atualizar_dashboard(dados, data_ini, data_fim, categorias, vendedores, meta_
         cor_meta = "red"
         icone_meta = "⬇️"
 
-    # KPIs
+    # KPIs GERAIS
     kpis = [
         html.Div([html.H3("💰 Faturamento"), html.H4(f"R$ {faturamento:,.2f}")], className="card"),
         html.Div([html.H3("📈 Lucro"), html.H4(f"R$ {lucro:,.2f}")], className="card"),
@@ -220,7 +241,39 @@ def atualizar_dashboard(dados, data_ini, data_fim, categorias, vendedores, meta_
         ], className="card")
     ]
 
+    # =========================
+    # DASHBOARD INDIVIDUAL
+    # =========================
+    if vendedor_individual and vendedor_individual in df_vendedor["vendedor"].values:
+        dados_v = df_vendedor[df_vendedor["vendedor"] == vendedor_individual].iloc[0]
+
+        kpis_vendedor = [
+            html.Div([html.H3("👤 Vendedor"), html.H4(vendedor_individual)], className="card"),
+            html.Div([html.H3("💰 Faturamento"), html.H4(f"R$ {dados_v['valor_total_venda']:,.2f}")], className="card"),
+            html.Div([html.H3("🎯 Meta Individual"), html.H4(f"R$ {dados_v['meta_individual']:,.2f}")], className="card"),
+            html.Div([
+                html.H3("📊 Atingimento"),
+                html.H4(f"{dados_v['percentual_meta']:.1f}%"),
+                html.P(dados_v["status"])
+            ], className="card"),
+            html.Div([html.H3("🏆 Ranking"), html.H4(f"{int(dados_v['ranking'])}º lugar")], className="card")
+        ]
+
+        df_v_ind = df_filtrado[df_filtrado["vendedor"] == vendedor_individual]
+        fig_vendedor_individual = px.line(
+            df_v_ind.groupby("data_venda")["valor_total_venda"].sum().reset_index(),
+            x="data_venda",
+            y="valor_total_venda",
+            title=f"📈 Evolução de Vendas – {vendedor_individual}",
+            markers=True
+        )
+    else:
+        kpis_vendedor = html.Div("Selecione um vendedor para visualizar o desempenho individual.")
+        fig_vendedor_individual = px.line(title="Selecione um vendedor")
+
+    # =========================
     # GRÁFICOS
+    # =========================
     fig_tempo = px.line(
         df_filtrado.groupby("data_venda")["valor_total_venda"].sum().reset_index(),
         x="data_venda", y="valor_total_venda",
@@ -265,14 +318,18 @@ def atualizar_dashboard(dados, data_ini, data_fim, categorias, vendedores, meta_
     )
 
     fig_vendedores.update_traces(textposition="outside")
-    fig_vendedores.update_layout(
-        xaxis_categoryorder="total descending",
-        uniformtext_minsize=8,
-        uniformtext_mode="hide"
+    fig_vendedores.update_layout(xaxis_categoryorder="total descending")
+
+    return (
+        kpis,
+        fig_tempo,
+        fig_categoria,
+        fig_pagamento,
+        fig_produtos,
+        fig_vendedores,
+        kpis_vendedor,
+        fig_vendedor_individual
     )
-
-    return kpis, fig_tempo, fig_categoria, fig_pagamento, fig_produtos, fig_vendedores
-
 
 # RUN
 server = app.server
