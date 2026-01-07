@@ -6,9 +6,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
-# =========================
 # CARREGAMENTO DOS DADOS
-# =========================
 def carregar_dados():
     url = "https://docs.google.com/spreadsheets/d/1yVuRDq2HL-ee4wmUxwXRM2icsMAWjIllcXHHISzpze8/export?format=csv"
     try:
@@ -22,9 +20,7 @@ def carregar_dados():
 
 df_inicial = carregar_dados()
 
-# =========================
 # APP
-# =========================
 app = dash.Dash(
     __name__,
     external_stylesheets=[dbc.themes.FLATLY, "/assets/style.css"],
@@ -33,9 +29,7 @@ app = dash.Dash(
 server = app.server
 app.title = "Recanto da Fé"
 
-# =========================
 # LAYOUT
-# =========================
 app.layout = dbc.Container(fluid=True, className="p-4", style={"backgroundColor": "#f8f9fa"}, children=[
     dbc.Row(dbc.Col(html.H1("Recanto da Fé – Dashboard de Vendas", className="text-center fw-bold mb-4 main-title"))),
     dbc.Row(
@@ -111,9 +105,7 @@ app.layout = dbc.Container(fluid=True, className="p-4", style={"backgroundColor"
     dcc.Store(id="store-meta", data=50000),
 ])
 
-# =========================
 # CALLBACKS
-# =========================
 @app.callback(
     Output("pagina-atual", "data"),
     Input("btn-geral", "n_clicks"),
@@ -187,7 +179,7 @@ def atualizar_dashboard(dados, data_ini, data_fim, categorias, vendedores, meta_
 
     df = pd.DataFrame(dados)
 
-    # --- Proteção de Colunas ---
+    #Proteção de Colunas
     required_cols = {
         "valor_total_venda": "numeric", "lucro": "numeric", "id_venda": "object", 
         "categoria": "object", "vendedor": "object", "forma_pagamento": "object", 
@@ -216,7 +208,7 @@ def atualizar_dashboard(dados, data_ini, data_fim, categorias, vendedores, meta_
     if df_filtrado.empty:
         return empty_return
 
-    # --- Lógica de Comparação ---
+    #Lógica de Comparação 
     df_anterior = pd.DataFrame()
     if comparacao == "anterior":
         dias_periodo = (data_fim - data_ini).days
@@ -228,7 +220,7 @@ def atualizar_dashboard(dados, data_ini, data_fim, categorias, vendedores, meta_
         if vendedores:
             df_anterior = df_anterior[df_anterior["vendedor"].isin(vendedores)]
 
-    # --- KPIs ---
+    # KPIs 
     faturamento = df_filtrado["valor_total_venda"].sum()
     lucro = df_filtrado["lucro"].sum()
     vendas = df_filtrado["id_venda"].nunique()
@@ -283,7 +275,6 @@ def atualizar_dashboard(dados, data_ini, data_fim, categorias, vendedores, meta_
         criar_kpi_card("👥 VENDEDORES NA META", f"{vendedores_bateram}"),
     ]
     
-    # --- Correção do Locale ---
     dias_semana_map = {0: 'Segunda', 1: 'Terça', 2: 'Quarta', 3: 'Quinta', 4: 'Sexta', 5: 'Sábado', 6: 'Domingo'}
     df_filtrado['dia_semana_num'] = df_filtrado['data_venda'].dt.dayofweek
     df_filtrado['dia_semana_nome'] = df_filtrado['dia_semana_num'].map(dias_semana_map)
@@ -295,7 +286,7 @@ def atualizar_dashboard(dados, data_ini, data_fim, categorias, vendedores, meta_
     else:
         kpis.append(criar_kpi_card("☀️ MELHOR DIA", "N/A"))
 
-    # --- Dashboard Individual ---
+    # Dashboard Individual 
     kpis_vendedor, fig_vendedor_individual = [dbc.Col(dbc.Alert("Selecione um vendedor.", color="info"))], go.Figure()
     if vendedor_individual:
         df_v_ind = df_filtrado[df_filtrado["vendedor"] == vendedor_individual]
@@ -314,7 +305,7 @@ def atualizar_dashboard(dados, data_ini, data_fim, categorias, vendedores, meta_
                 df_v_ind.groupby(df_v_ind['data_venda'].dt.date)["valor_total_venda"].sum().reset_index(),
                 x="data_venda", y="valor_total_venda", title=f"📈 Evolução de Vendas – {vendedor_individual}", markers=True, template="plotly_white")
     
-    # --- Gráficos ---
+    # Gráficos 
     fig_tempo = px.line(df_filtrado.groupby(df_filtrado['data_venda'].dt.date)["valor_total_venda"].sum().reset_index(), x="data_venda", y="valor_total_venda", title="Faturamento ao Longo do Tempo", markers=True, template="plotly_white")
     
     df_filtrado['custo'] = df_filtrado['valor_mercadoria']
