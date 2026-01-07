@@ -3,6 +3,7 @@ import dash
 import dash_bootstrap_components as dbc
 from dash import dcc, html, Input, Output
 import plotly.express as px
+import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
 # =========================
@@ -10,10 +11,14 @@ from datetime import datetime, timedelta
 # =========================
 def carregar_dados():
     url = "https://docs.google.com/spreadsheets/d/1yVuRDq2HL-ee4wmUxwXRM2icsMAWjIllcXHHISzpze8/export?format=csv"
-    df = pd.read_csv(url)
-    df["data_venda"] = pd.to_datetime(df["data_venda"], errors="coerce")
-    df = df.dropna(subset=["data_venda"])
-    return df
+    try:
+        df = pd.read_csv(url)
+        df["data_venda"] = pd.to_datetime(df["data_venda"], errors="coerce")
+        df = df.dropna(subset=["data_venda"])
+        return df
+    except Exception as e:
+        print(f"Erro ao carregar dados: {e}")
+        return pd.DataFrame()
 
 df_inicial = carregar_dados()
 
@@ -56,20 +61,20 @@ app.layout = dbc.Container(fluid=True, className="p-4", style={"backgroundColor"
                         html.Label("📅 Período"),
                         dcc.DatePickerRange(
                             id="filtro-data",
-                            min_date_allowed=df_inicial["data_venda"].min(),
-                            max_date_allowed=df_inicial["data_venda"].max(),
-                            start_date=df_inicial["data_venda"].min(),
-                            end_date=df_inicial["data_venda"].max(),
+                            min_date_allowed=df_inicial["data_venda"].min() if not df_inicial.empty else None,
+                            max_date_allowed=df_inicial["data_venda"].max() if not df_inicial.empty else None,
+                            start_date=df_inicial["data_venda"].min() if not df_inicial.empty else None,
+                            end_date=df_inicial["data_venda"].max() if not df_inicial.empty else None,
                             display_format="DD/MM/YYYY"
                         )
                     ], md=3),
                     dbc.Col([
                         html.Label("🏷️ Categoria"),
-                        dcc.Dropdown(id="filtro-categoria", options=[{"label": c, "value": c} for c in df_inicial["categoria"].unique()], multi=True, placeholder="Selecione")
+                        dcc.Dropdown(id="filtro-categoria", options=[{"label": c, "value": c} for c in df_inicial["categoria"].unique()] if not df_inicial.empty else [], multi=True, placeholder="Selecione")
                     ], md=3),
                     dbc.Col([
                         html.Label("👤 Vendedor"),
-                        dcc.Dropdown(id="filtro-vendedor", options=[{"label": v, "value": v} for v in df_inicial["vendedor"].unique()], multi=True, placeholder="Selecione")
+                        dcc.Dropdown(id="filtro-vendedor", options=[{"label": v, "value": v} for v in df_inicial["vendedor"].unique()] if not df_inicial.empty else [], multi=True, placeholder="Selecione")
                     ], md=2),
                     dbc.Col([
                         html.Label("🔁 Comparar com"),
@@ -95,14 +100,14 @@ app.layout = dbc.Container(fluid=True, className="p-4", style={"backgroundColor"
     html.Div(id="pagina-vendedor", style={"display": "none"}, children=[
         dbc.Card(dbc.CardBody([
             html.H4("👤 Dashboard Individual do Vendedor", className="fw-bold mb-3"),
-            dbc.Row(dbc.Col(dcc.Dropdown(id="vendedor-individual", options=[{"label": v, "value": v} for v in df_inicial["vendedor"].unique()], placeholder="Escolha o vendedor"), md=4))
+            dbc.Row(dbc.Col(dcc.Dropdown(id="vendedor-individual", options=[{"label": v, "value": v} for v in df_inicial["vendedor"].unique()] if not df_inicial.empty else [], placeholder="Escolha o vendedor"), md=4))
         ]), className="mb-4 shadow-sm"),
         dbc.Row(id="kpis-vendedor", className="g-4 mb-4"),
         dbc.Card(dbc.CardBody(dcc.Graph(id="grafico-vendedor-individual")), className="shadow-sm chart-card")
     ]),
 
     dcc.Interval(id="interval-atualizacao", interval=1800000),
-    dcc.Store(id="dados-vendas"),
+    dcc.Store(id="dados-vendas", data=df_inicial.to_dict("records") if not df_inicial.empty else []),
     dcc.Store(id="store-meta", data=50000),
 ])
 
@@ -117,6 +122,8 @@ app.layout = dbc.Container(fluid=True, className="p-4", style={"backgroundColor"
 )
 def trocar_pagina(btn_geral, btn_vendedor):
     ctx = dash.callback_context
+    if not ctx.triggered:
+        return "geral"
     botao = ctx.triggered[0]["prop_id"].split(".")[0]
     return "vendedor" if botao == "btn-vendedor" else "geral"
 
@@ -172,34 +179,56 @@ def criar_kpi_card(title, value, subtext="", color_class="", comparison_text="",
     Input("filtro-comparacao", "value")
 )
 def atualizar_dashboard(dados, data_ini, data_fim, categorias, vendedores, meta_mensal, vendedor_individual, comparacao):
-    if not dados:
-        return [[] for _ in range(9)]
+    empty_fig = go.Figure()
+    empty_return = ([], empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, [], empty_fig)
+    
+    if not dados or data_ini is None or data_fim is None:
+        return empty_return
 
     df = pd.DataFrame(dados)
+
+    # --- Proteção de Colunas ---
+    required_cols = {
+        "valor_total_venda": "numeric", "lucro": "numeric", "id_venda": "object", 
+        "categoria": "object", "vendedor": "object", "forma_pagamento": "object", 
+        "produto": "object", "quantidade_venda": "numeric", "valor_mercadoria": "numeric"
+    }
+    for col, type in required_cols.items():
+        if col not in df.columns:
+            if type == "numeric":
+                df[col] = 0
+            else:
+                df[col] = "N/A"
+    
     df["data_venda"] = pd.to_datetime(df["data_venda"])
     df = df.dropna(subset=["data_venda"])
-    if df.empty:
-        return [[] for _ in range(9)]
 
-    data_ini = datetime.strptime(data_ini.split('T')[0], '%Y-%m-%d')
-    data_fim = datetime.strptime(data_fim.split('T')[0], '%Y-%m-%d')
+    data_ini = pd.to_datetime(data_ini)
+    data_fim = pd.to_datetime(data_fim)
 
     df_filtrado = df[(df["data_venda"] >= data_ini) & (df["data_venda"] <= data_fim)]
+    
     if categorias:
         df_filtrado = df_filtrado[df_filtrado["categoria"].isin(categorias)]
     if vendedores:
         df_filtrado = df_filtrado[df_filtrado["vendedor"].isin(vendedores)]
 
+    if df_filtrado.empty:
+        return empty_return
+
+    # --- Lógica de Comparação ---
     df_anterior = pd.DataFrame()
     if comparacao == "anterior":
+        dias_periodo = (data_fim - data_ini).days
         data_fim_ant = data_ini - timedelta(days=1)
-        data_ini_ant = data_fim_ant - timedelta(days=29)
+        data_ini_ant = data_fim_ant - timedelta(days=dias_periodo)
         df_anterior = df[(df["data_venda"] >= data_ini_ant) & (df["data_venda"] <= data_fim_ant)]
         if categorias:
             df_anterior = df_anterior[df_anterior["categoria"].isin(categorias)]
         if vendedores:
             df_anterior = df_anterior[df_anterior["vendedor"].isin(vendedores)]
 
+    # --- KPIs ---
     faturamento = df_filtrado["valor_total_venda"].sum()
     lucro = df_filtrado["lucro"].sum()
     vendas = df_filtrado["id_venda"].nunique()
@@ -232,6 +261,7 @@ def atualizar_dashboard(dados, data_ini, data_fim, categorias, vendedores, meta_
     df_vendedor["peso"] = (df_vendedor["valor_total_venda"] / total_vendas_vendedores) if total_vendas_vendedores > 0 else 0
     df_vendedor["meta_individual"] = df_vendedor["peso"] * meta_mensal
     df_vendedor["percentual_meta"] = (df_vendedor["valor_total_venda"] / df_vendedor["meta_individual"] * 100).replace([float("inf"), -float("inf")], 0).fillna(0)
+    
     def status_vendedor(row):
         if row["percentual_meta"] >= 100: return "🟢 Meta batida"
         elif row["percentual_meta"] >= 70: return "🟠 Quase lá"
@@ -253,31 +283,38 @@ def atualizar_dashboard(dados, data_ini, data_fim, categorias, vendedores, meta_
         criar_kpi_card("👥 VENDEDORES NA META", f"{vendedores_bateram}"),
     ]
     
-    if not df_filtrado.empty:
-        vendas_por_dia = df_filtrado.groupby(df_filtrado["data_venda"].dt.day_name(locale='pt_BR'))["valor_total_venda"].sum()
+    # --- Correção do Locale ---
+    dias_semana_map = {0: 'Segunda', 1: 'Terça', 2: 'Quarta', 3: 'Quinta', 4: 'Sexta', 5: 'Sábado', 6: 'Domingo'}
+    df_filtrado['dia_semana_num'] = df_filtrado['data_venda'].dt.dayofweek
+    df_filtrado['dia_semana_nome'] = df_filtrado['dia_semana_num'].map(dias_semana_map)
+    vendas_por_dia = df_filtrado.groupby('dia_semana_nome')["valor_total_venda"].sum()
+    if not vendas_por_dia.empty:
         melhor_dia = vendas_por_dia.idxmax()
         melhor_dia_valor = vendas_por_dia.max()
-        kpis.append(criar_kpi_card("☀️ MELHOR DIA", melhor_dia.capitalize(), subtext=f"R$ {melhor_dia_valor:,.2f}"))
+        kpis.append(criar_kpi_card("☀️ MELHOR DIA", melhor_dia, subtext=f"R$ {melhor_dia_valor:,.2f}"))
     else:
         kpis.append(criar_kpi_card("☀️ MELHOR DIA", "N/A"))
 
-    kpis_vendedor, fig_vendedor_individual = [dbc.Col(dbc.Alert("Selecione um vendedor.", color="info"))], {}
+    # --- Dashboard Individual ---
+    kpis_vendedor, fig_vendedor_individual = [dbc.Col(dbc.Alert("Selecione um vendedor.", color="info"))], go.Figure()
     if vendedor_individual:
         df_v_ind = df_filtrado[df_filtrado["vendedor"] == vendedor_individual]
-        fat_v_ind = df_v_ind["valor_total_venda"].sum()
-        lucro_v_ind = df_v_ind["lucro"].sum()
-        vendas_v_ind = df_v_ind["id_venda"].nunique()
-        ticket_v_ind = fat_v_ind / vendas_v_ind if vendas_v_ind > 0 else 0
-        kpis_vendedor = [
-            criar_kpi_card("💰 FATURAMENTO", f"R$ {fat_v_ind:,.2f}"),
-            criar_kpi_card("📈 LUCRO", f"R$ {lucro_v_ind:,.2f}"),
-            criar_kpi_card("🧾 VENDAS", f"{vendas_v_ind}"),
-            criar_kpi_card("🛒 TICKET MÉDIO", f"R$ {ticket_v_ind:,.2f}"),
-        ]
-        fig_vendedor_individual = px.line(
-            df_v_ind.groupby(df_v_ind['data_venda'].dt.date)["valor_total_venda"].sum().reset_index(),
-            x="data_venda", y="valor_total_venda", title=f"📈 Evolução de Vendas – {vendedor_individual}", markers=True, template="plotly_white")
-
+        if not df_v_ind.empty:
+            fat_v_ind = df_v_ind["valor_total_venda"].sum()
+            lucro_v_ind = df_v_ind["lucro"].sum()
+            vendas_v_ind = df_v_ind["id_venda"].nunique()
+            ticket_v_ind = fat_v_ind / vendas_v_ind if vendas_v_ind > 0 else 0
+            kpis_vendedor = [
+                criar_kpi_card("💰 FATURAMENTO", f"R$ {fat_v_ind:,.2f}"),
+                criar_kpi_card("📈 LUCRO", f"R$ {lucro_v_ind:,.2f}"),
+                criar_kpi_card("🧾 VENDAS", f"{vendas_v_ind}"),
+                criar_kpi_card("🛒 TICKET MÉDIO", f"R$ {ticket_v_ind:,.2f}"),
+            ]
+            fig_vendedor_individual = px.line(
+                df_v_ind.groupby(df_v_ind['data_venda'].dt.date)["valor_total_venda"].sum().reset_index(),
+                x="data_venda", y="valor_total_venda", title=f"📈 Evolução de Vendas – {vendedor_individual}", markers=True, template="plotly_white")
+    
+    # --- Gráficos ---
     fig_tempo = px.line(df_filtrado.groupby(df_filtrado['data_venda'].dt.date)["valor_total_venda"].sum().reset_index(), x="data_venda", y="valor_total_venda", title="Faturamento ao Longo do Tempo", markers=True, template="plotly_white")
     
     df_filtrado['custo'] = df_filtrado['valor_mercadoria']
@@ -303,8 +340,7 @@ def atualizar_dashboard(dados, data_ini, data_fim, categorias, vendedores, meta_
     fig_categoria.update_layout(xaxis_title=None, yaxis_title=None)
     fig_lucro_custo.update_layout(yaxis_title=None, xaxis_title="Data")
 
-
     return (kpis, fig_tempo, fig_lucro_custo, fig_categoria, fig_pagamento, fig_produtos, fig_vendedores, kpis_vendedor, fig_vendedor_individual)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=False)
